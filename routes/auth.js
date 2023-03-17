@@ -39,7 +39,6 @@ router.post("/authenticate", async (req, res) => {
       //gives access token
       {
         id: user._id,
-        isAdmin: user.isAdmin,
       },
       process.env.JWT_SEC,
       { expiresIn: "3d" }

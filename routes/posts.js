@@ -7,6 +7,9 @@ const toId = mongoose.Types.ObjectId;
 
 //create a post
 router.post("/posts/", verifyToken, async (req, res) => {
+  if (!req.body.title) {
+    return res.status(400).json({ message: "Title is required" });
+  }
   const newPost = new Post({ ...req.body, postBy: req.user.id });
   try {
     const savedPost = await newPost.save();
@@ -76,6 +79,9 @@ router.put("/unlike/:id", verifyToken, async (req, res) => {
 
 //add comments
 router.put("/comment/:id", verifyToken, async (req, res) => {
+  if (!req.body.comment) {
+    return res.status(400).json({ message: "Comment is required!" });
+  }
   const comment = {
     comment: req.body.comment,
     commentBy: req.user.id,
