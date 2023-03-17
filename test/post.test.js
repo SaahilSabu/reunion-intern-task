@@ -74,21 +74,28 @@ describe("Post API", () => {
         .catch((err) => done(err));
     });
 
-    it("should get a post by ID", (done) => {
-      chai
-        .request(app)
-        .get(`/api/posts/${postId}`)
-        .set("token", `Bearer ${token}`)
-        .end((err, res) => {
-          expect(res).to.have.status(200);
-          expect(res.body.likes).to.be.a("number");
-          expect(res.body.comments).to.be.an("array");
-          done();
-        });
-    });
+    it("should get a post by ID and return its likes and comments", (done) => {
+        chai
+          .request(app)
+          .get(`/api/posts/${postId}`)
+          .set("token", `Bearer ${token}`)
+          .end((err, res) => {
+            expect(err).to.be.null;
+            expect(res).to.have.status(200);
+            expect(res.body.likes).to.be.a("number").and.to.not.be.NaN;
+            expect(res.body.comments).to.be.an("array");
+      
+            // Check if each comment in the array is a string
+            res.body.comments.forEach((comment) => {
+              expect(comment).to.be.a("string");
+            });
+      
+            done();
+          });
+      });
+      
 
     it("should like a post", (done) => {
-      //   console.log(postId, token);
       chai
         .request(app)
         .put(`/api/like/${postId}`)
@@ -96,6 +103,17 @@ describe("Post API", () => {
         .end((err, res) => {
           expect(res).to.have.status(200);
           expect(res.body).to.equal("The post has been liked");
+          done();
+        });
+    });
+    it("should not be allowed to like again", (done) => {
+      chai
+        .request(app)
+        .put(`/api/like/${postId}`)
+        .set("token", `Bearer ${token}`)
+        .end((err, res2) => {
+          expect(res2).to.have.status(200);
+          expect(res2.body).to.equal("The post has been liked already");
           done();
         });
     });
@@ -108,6 +126,17 @@ describe("Post API", () => {
         .end((err, res) => {
           expect(res).to.have.status(200);
           expect(res.body).to.equal("The post has been disliked");
+          done();
+        });
+    });
+    it("should not be allowed to unlike a post again", (done) => {
+      chai
+        .request(app)
+        .put(`/api/unlike/${postId}`)
+        .set("token", `Bearer ${token}`)
+        .end((err, res2) => {
+          expect(res2).to.have.status(200);
+          expect(res2.body).to.equal("The post has been disliked already");
           done();
         });
     });
@@ -149,7 +178,8 @@ describe("Post API", () => {
           done();
         });
     });
-    it("should get all posts by user", (done) => {
+
+    it("should get all posts by user and check total posts in db", (done) => {
       chai
         .request(app)
         .get(`/api/all_posts`)
@@ -157,20 +187,35 @@ describe("Post API", () => {
         .end((err, res) => {
           expect(res).to.have.status(200);
           expect(res.body).to.be.an("array");
+          expect(res.body[0]).to.have.property("_id");
+          expect(res.body[0]).to.have.property("title");
+          expect(res.body[0]).to.have.property("desc");
+          expect(res.body[0]).to.have.property("createdAt");
+          expect(res.body[0]).to.have.property("likes");
+          expect(res.body[0]).to.have.property("comments").to.be.an("array");
           done();
         });
     });
 
     it("should delete a post by ID", (done) => {
-      chai
-        .request(app)
-        .delete(`/api/posts/${postId}`)
-        .set("token", `Bearer ${token}`)
-        .end((err, res) => {
-          expect(res).to.have.status(200);
-          expect(res.body).to.equal("the post has been deleted");
-          done();
-        });
+      Post.countDocuments({})
+        .then((countBefore) => {
+          chai
+            .request(app)
+            .delete(`/api/posts/${postId}`)
+            .set("token", `Bearer ${token}`)
+            .end((err, res) => {
+              expect(res).to.have.status(200);
+              expect(res.body).to.equal("the post has been deleted");
+              Post.countDocuments({})
+                .then((countAfter) => {
+                  expect(countAfter + 1).to.equal(countBefore);
+                  done();
+                })
+                .catch((err) => done(err));
+            });
+        })
+        .catch((err) => done(err));
     });
   });
 });
